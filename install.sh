@@ -11,15 +11,15 @@ BOLD="\033[1m"
 GRAY="\033[1;30m"
 
 print_task() {
-  echo -ne "${GRAY}•${RESET} $1..."
+  echo -ne "${GRAY}â€¢${RESET} $1..."
 }
 
 print_done() {
-  echo -e "\r${GREEN}✓${RESET} $1      "
+  echo -e "\r${GREEN}âœ“${RESET} $1      "
 }
 
 print_fail() {
-  echo -e "\r${RED}✗${RESET} $1      "
+  echo -e "\r${RED}âœ—${RESET} $1      "
   exit 1
 }
 
@@ -38,7 +38,7 @@ run_silent() {
 
 clear
 echo -e "${BOLD}ZiVPN UDP Installer${RESET}"
-echo -e "${GRAY}AutoFTbot X ZeroTunnel Edition${RESET}"
+echo -e "${GRAY}AutoFTbot Edition${RESET}"
 echo ""
 
 if [[ "$(uname -s)" != "Linux" ]] || [[ "$(uname -m)" != "x86_64" ]]; then
@@ -152,10 +152,13 @@ mkdir -p /etc/zivpn/api
 run_silent "Setting up API" "wget -q https://raw.githubusercontent.com/Beni-glith/ZiVPN/main/zivpn-api.go -O /etc/zivpn/api/zivpn-api.go && wget -q https://raw.githubusercontent.com/Beni-glith/ZiVPN/main/go.mod -O /etc/zivpn/api/go.mod"
 
 cd /etc/zivpn/api
-if go build -o zivpn-api zivpn-api.go &>/dev/null; then
+run_silent "Resolving API deps" "go mod tidy"
+if go build -o zivpn-api zivpn-api.go 2>/tmp/zivpn_api_build.log; then
   print_done "Compiling API"
 else
   print_fail "Compiling API"
+  echo -e "${YELLOW}Build log (last 30 lines):${RESET}"
+  tail -n 30 /tmp/zivpn_api_build.log 2>/dev/null || true
 fi
 
 cat <<EOF > /etc/systemd/system/zivpn-api.service
@@ -209,7 +212,7 @@ if [[ -n "$bot_token" ]] && [[ -n "$admin_id" ]]; then
   cd /etc/zivpn/api
   run_silent "Downloading Bot Deps" "go get github.com/go-telegram-bot-api/telegram-bot-api/v5"
   
-  if go build -o zivpn-bot "$bot_file" &>/dev/null; then
+  if go build -o zivpn-bot "$bot_file" 2>/tmp/zivpn_bot_build.log; then
     print_done "Compiling Bot"
     
     cat <<EOF > /etc/systemd/system/zivpn-bot.service
